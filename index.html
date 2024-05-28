@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stereo Tester</title>
+
+  <script>
+    const playing = [];
+    let dontStop = false;
+
+    const playTone = (panValue) => {
+      dontStop = document.getElementById('dontStop').checked;
+      playSine(panValue);
+    }
+
+    function playSine(panValue) {
+      if (panValue < -1.0 || panValue > 1.0) {
+          console.error("Pan value must be between -1.0 and 1.0");
+          return;
+      }
+
+      haltTones();
+
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      const panNode = audioCtx.createStereoPanner();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(440 * 2, audioCtx.currentTime); // 440Hz
+
+      gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+      panNode.pan.setValueAtTime(panValue, audioCtx.currentTime);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(panNode);
+      panNode.connect(audioCtx.destination);
+
+      playing.push(oscillator);
+      oscillator.start();
+      killswitch.disabled = false;
+
+      setTimeout(() => {
+        if (dontStop) return;
+
+        haltTones();
+      }, 2000);
+  }
+
+    const haltTones = () => {
+      // Stop all current oscillators
+      for (let i = 0; i < playing.length; i++){
+        const item = playing[i];
+        item.stop();
+      }
+
+      // Clear list
+      playing.length = 0;
+
+      const killswitch = document.getElementById('killswitch');
+      killswitch.disabled = true;
+    }
+
+    const playLeft = () => playTone(-1);
+    const playStereo = () => playTone(0);
+    const playRight = () => playTone(1);
+
+    const playFromUI = () => {
+      const panning = document.getElementById('panSlider');
+      console.log(panning.value);
+      playTone(panning.value);
+    }
+  </script>
+
+  <style>
+    html, body{
+      top: 0;
+      left: 0;
+      padding: 0;
+      margin: 0;
+      color: #fff;
+      background-color: #151515;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    div {
+      padding: 2rem;
+    }
+    
+    .buttons {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .centered {
+      justify-content: center;
+    }
+
+    .column {
+      flex-direction: column;
+    }
+
+    .column > span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    button {
+      font-size: larger;
+      padding: 0.5em;
+    }
+
+    #killswitch {
+      background-color: #ae0000;
+      color: #fff;
+      border-radius: 0.2rem;
+      border: none;
+      cursor: pointer;
+    }
+
+    #killswitch:hover {
+      filter: brightness(1.2);
+    }
+
+    #killswitch:disabled {
+      background-color: #780101;
+      color: #555;
+      cursor: not-allowed;
+    }
+
+  </style>
+</head>
+<body>
+  <header>
+    <h1>
+      Stereo Tester 🔊
+    </h1>
+  </header>
+
+  <div class="buttons centered column">
+    <span>
+      <label
+        for="panSlider"
+        style="font-size: larger; margin-bottom: 0.6rem;"
+      >
+        Panning
+      </label>
+    </span>
+    <span style="margin-bottom: 1rem;">
+      L <input type="range" min="-1" max="1" value="0" id="panSlider" step="0.1" /> R
+    </span>
+    <span>
+      <button onclick="playFromUI()">
+        Test Pan
+      </button>
+    </span>
+  </div>
+
+  <div class="buttons">
+    <button onclick="playLeft()">
+      Test Left
+    </button>
+    <button onclick="playStereo()">
+      Test Left + Right
+    </button>
+    <button onclick="playRight()">
+      Test Right
+    </button>
+  </div>
+
+  <div class="buttons centered column">
+    <span style="margin-bottom: 1rem;">
+      <button onclick="haltTones()" disabled id="killswitch">
+        ⏹ Stop
+      </button>
+    </span>
+
+    <span>
+      <input type="checkbox" id="dontStop" />
+      <label for="dontStop">
+        🔁 Loop
+      </label>
+    </span>
+  </div>
+</body>
+</html>
