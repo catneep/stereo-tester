@@ -5,12 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stereo Tester</title>
 
-  <script>
+  <meta name="description" content="Test stereo speaker systems from a simple web UI">
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔊</text></svg>" />
+
+  <script defer>
     const playing = [];
-    let dontStop = false;
+    let loop = false;
+    const oscillatorParams = {
+      waveType: 'sine',
+      frequency: 880,
+      gain: 0.9,
+    }
 
     const playTone = (panValue) => {
-      dontStop = document.getElementById('dontStop').checked;
+      loop = document.getElementById('dontStop').checked;
       playSine(panValue);
     }
 
@@ -27,11 +36,17 @@
       const gainNode = audioCtx.createGain();
       const panNode = audioCtx.createStereoPanner();
 
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(440 * 2, audioCtx.currentTime); // 440Hz
+      oscillator.type = oscillatorParams.waveType;
+      oscillator.frequency.setValueAtTime(
+        oscillatorParams.frequency,
+        audioCtx.currentTime,
+      );
 
-      gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
       panNode.pan.setValueAtTime(panValue, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(
+        oscillatorParams.gain,
+        audioCtx.currentTime,
+      );
 
       oscillator.connect(gainNode);
       gainNode.connect(panNode);
@@ -42,7 +57,7 @@
       killswitch.disabled = false;
 
       setTimeout(() => {
-        if (dontStop) return;
+        if (loop) return;
 
         haltTones();
       }, 2000);
@@ -71,6 +86,10 @@
       console.log(panning.value);
       playTone(panning.value);
     }
+
+    const changeWaveform = () =>{
+      oscillatorParams.waveType = document.getElementById('waveDropdown').value;
+      console.log(document.getElementById('waveDropdown').value);}
   </script>
 
   <style>
@@ -82,6 +101,15 @@
       color: #fff;
       background-color: #151515;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      gap: 0px 0px;
     }
 
     header {
@@ -136,6 +164,16 @@
       cursor: not-allowed;
     }
 
+    strong {
+      margin-left: 0.4em;
+      margin-right: 0.4em;
+    }
+
+    @media screen and (max-width: 700px) {
+      button {
+        font-size: medium;
+      }
+    }
   </style>
 </head>
 <body>
@@ -143,6 +181,16 @@
     <h1>
       Stereo Tester 🔊
     </h1>
+    <div class="buttons centered">
+      <label for="waveDropdown" style="margin-right: 0.5rem;">
+        Waveform:
+      </label>
+      <select name="wavetype" id="waveDropdown" onchange="changeWaveform()">
+        <option value="sine" selected>Sine</option>
+        <option value="triangle">Triangle</option>
+        <option value="square">Square</option>
+      </select>
+    </div>
   </header>
 
   <div class="buttons centered column">
@@ -155,7 +203,9 @@
       </label>
     </span>
     <span style="margin-bottom: 1rem;">
-      L <input type="range" min="-1" max="1" value="0" id="panSlider" step="0.1" /> R
+      <strong>L</strong>
+      <input type="range" min="-1" max="1" value="0" id="panSlider" step="0.1" />
+      <strong>R</strong>
     </span>
     <span>
       <button onclick="playFromUI()">
